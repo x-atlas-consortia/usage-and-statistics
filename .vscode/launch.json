@@ -1,0 +1,23 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        
+        {cd src
+            "command": "cd src && nvm use 20 && npm run all",
+            "name": "Run npm run all",
+            "request": "launch",
+            "type": "node-terminal",
+            "skipFiles": [
+                "<node_internals>/**",
+                "${workspaceFolder}/node_modules/**/*.js",
+                "node_modules",
+                "./node_modules",
+                "./node_modules/*",
+                "./node_modules/@types/node/index.d.ts",
+            ],
+        },
+    
+}

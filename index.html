@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Usage Dashboard — Static</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      
+      <div class="brand">
+        <img src="hubmap-type-white250.png" alt="HuBMAP Logo">
+      </div>
+      <nav>
+        <ul>
+          <li><a href="#" data-src="dashboard.html" class="nav-link active">Usage</a></li>
+          <li><a href="#" data-src="webportal.html?v=web-portal" class="nav-link">Web Portal</a></li>
+          <li><a href="#" data-src="dataportal.html?v=data-portal" class="nav-link">Data Portal</a></li>
+        </ul>
+      </nav>
+    </aside>
+
+    <main class="frame-area">
+      <iframe id="mainFrame" src="dashboard.html" frameborder="0"></iframe>
+    </main>
+  </div>
+
+    <script>
+    // Simple top-tab iframe loader. Ctrl/Cmd-click the Hubmap logo to toggle layout for the active tab.
+    document.addEventListener('DOMContentLoaded', function(){
+      const links = document.querySelectorAll('.nav-link');
+      const frame = document.getElementById('mainFrame');
+      // remember per-src layout state ("side" or "stack")
+      const layouts = {};
+
+      function buildSrcUrl(src, layoutOverride) {
+        const url = new URL(src, window.location.href);
+        // forward any parent query params (e.g. ?v=...) to the iframe unless already present
+        const parentParams = new URLSearchParams(window.location.search || '');
+        parentParams.forEach((val, key) => {
+          if (!url.searchParams.has(key)) url.searchParams.set(key, val);
+        });
+        // apply layout override if provided, otherwise use stored layout for this src
+        const layoutToApply = layoutOverride || layouts[src];
+        if (layoutToApply) url.searchParams.set('layout', layoutToApply === 'stack' ? 'stack' : 'side');
+        return url.toString();
+      }
+
+      // regular tab navigation (no Ctrl/Cmd toggling here)
+      function activateTab(src, options={push:true, layoutOverride:null}){
+        const match = Array.from(links).find(x => x.getAttribute('data-src') === src);
+        if (match) {
+          links.forEach(x => x.classList.remove('active'));
+          match.classList.add('active');
+        }
+        // load iframe with forwarded params + optional layout override
+        frame.src = buildSrcUrl(src, options.layoutOverride);
+        // update parent URL so active tab is reflected; preserve other params
+        try {
+          const params = new URLSearchParams(window.location.search || '');
+          params.set('src', src);
+          const newUrl = window.location.pathname + (params.toString() ? ('?' + params.toString()) : '');
+          if (options.push) history.pushState({ src }, '', newUrl);
+          else history.replaceState({ src }, '', newUrl);
+        } catch (err) {
+          // ignore history errors
+        }
+      }
+      links.forEach(l => l.addEventListener('click', e => {
+        e.preventDefault();
+        const src = l.getAttribute('data-src');
+        activateTab(src, { push: true });
+      }));
+
+      // Ctrl/Cmd + click on the brand toggles layout for the currently active tab
+      const brand = document.querySelector('.brand');
+      if (brand) {
+        brand.addEventListener('click', e => {
+          if (!(e.ctrlKey || e.metaKey)) return;
+          // find the active tab (fallback to first link)
+          const active = document.querySelector('.nav-link.active') || links[0];
+          if (!active) return;
+          const src = active.getAttribute('data-src');
+          const current = layouts[src] || 'side';
+          const next = current === 'side' ? 'stack' : 'side';
+          layouts[src] = next;
+          // If the iframe is currently showing that src, send a postMessage to ask the child to reapply layout
+          try {
+            const iframeWindow = frame && frame.contentWindow;
+            const frameUrl = frame && frame.src ? String(frame.src) : '';
+            const isSame = frameUrl && frameUrl.indexOf(src) !== -1;
+            if (iframeWindow && isSame) {
+              iframeWindow.postMessage({ type: 'set-layout', layout: next === 'stack' ? 'stack' : 'side' }, '*');
+            } else {
+              // fallback: navigate the iframe to the src with layout param
+              frame.src = buildSrcUrl(src, next === 'stack' ? 'stack' : 'side');
+            }
+          } catch (err) {
+            // fallback to reloading if messaging fails
+            frame.src = buildSrcUrl(src, next === 'stack' ? 'stack' : 'side');
+          }
+          // ensure active styling
+          links.forEach(x => x.classList.remove('active'));
+          active.classList.add('active');
+        });
+      }
+      // if the page was opened with a top-level ?src=... param, auto-open that link
+      try {
+        const qs = new URLSearchParams(window.location.search || '');
+        const requested = qs.get('src');
+        if (requested) {
+          // use activateTab but don't push another history entry
+          activateTab(requested, { push: false });
+        }
+        else {
+          // otherwise ensure the initially-active tab is loaded with forwarded parent params
+          const active = document.querySelector('.nav-link.active') || links[0];
+          if (active) {
+            const src = active.getAttribute('data-src');
+            activateTab(src, { push: false });
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      // respond to back/forward navigation — restore the src param as the active tab
+      window.addEventListener('popstate', function(ev){
+        try {
+          const qs = new URLSearchParams(window.location.search || '');
+          const requested = qs.get('src');
+          if (requested) activateTab(requested, { push: false });
+        } catch (err) {
+          // ignore
+        }
+      });
+
+      // accept layout change notifications from child frames so parent remembers user's choice
+      window.addEventListener('message', function(e){
+        try {
+          const msg = (typeof e.data === 'string') ? JSON.parse(e.data) : e.data;
+          if (!msg || msg.type !== 'layout-changed') return;
+          const rawSrc = msg.src || '';
+          // try to match a configured data-src by basename
+          const basename = rawSrc.split('/').pop();
+          let linkKey = null;
+          for (const l of links) {
+            const ds = l.getAttribute('data-src') || '';
+            if (ds === rawSrc || ds.indexOf(basename) !== -1) { linkKey = ds; break; }
+          }
+          if (!linkKey) {
+            const active = document.querySelector('.nav-link.active');
+            linkKey = active ? active.getAttribute('data-src') : null;
+          }
+          if (linkKey) layouts[linkKey] = (msg.layout === 'stack' ? 'stack' : 'side');
+        } catch (err) {
+          // ignore malformed messages
+        }
+      });
+    });
+  </script>
+</body>
+</html>

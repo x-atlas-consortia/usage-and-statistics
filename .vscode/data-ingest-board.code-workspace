@@ -1,0 +1,66 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"workbench.colorTheme": "FriendlyDark - Flower Garden In Grey",
+		"blockman.n04ColorComboPreset": "Pale Pink (Gradients)",
+		"blockman.n23AnalyzeSquareBrackets": true,
+		"blockman.n24AnalyzeRoundBrackets": true,
+		"blockman.n03MaxDepth": 4,
+		"better-comments.tags": [
+			{
+				"tag": "!",
+				"color": "#FF2D00",
+				"strikethrough": false,
+				"underline": false,
+				"backgroundColor": "transparent",
+				"bold": false,
+				"italic": false
+			},
+			{
+				"tag": "?",
+				"color": "#3498DB",
+				"strikethrough": false,
+				"underline": false,
+				"backgroundColor": "transparent",
+				"bold": false,
+				"italic": false
+			},
+			{
+				"tag": "//",
+				"color": "#474747",
+				"strikethrough": true,
+				"underline": false,
+				"backgroundColor": "transparent",
+				"bold": false,
+				"italic": false
+			},
+			{
+				"tag": "todo",
+				"color": "#FF8C00",
+				"strikethrough": false,
+				"underline": false,
+				"backgroundColor": "transparent",
+				"bold": false,
+				"italic": false
+			},
+			{
+				"tag": "*",
+				"color": "#98C379",
+				"strikethrough": false,
+				"underline": false,
+				"backgroundColor": "transparent",
+				"bold": false,
+				"italic": false
+			}
+		],
+		"workbench.colorCustomizations": {
+			"activityBar.background": "#4c8120",
+			"titleBar.activeBackground": "#0e530e",
+			"titleBar.activeForeground": "#FDFAF4"
+		}
+	}
+}
