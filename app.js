@@ -68,9 +68,39 @@ async function init(){
       data = await apiRes.json();
       console.info('Loaded data from ' + API_URL);
     } catch (apiErr) {
-      console.error('Failed to load from API', apiErr);
-      showErrorOverlay(apiErr);
-      return; // do not proceed to render if API is unavailable
+      console.warn('Failed to load from API, attempting fallback to sample data', apiErr);
+      // Try fallback to bundled sample JSON so the UI can render in offline/dev scenarios
+      try {
+        const sampleRes = await fetch('sampleUsageResponse.json');
+        if (!sampleRes.ok) throw new Error('Sample file returned ' + sampleRes.status);
+        const text = await sampleRes.text();
+        try {
+          data = JSON.parse(text);
+        } catch (parseErr) {
+          // If the sample file contains multiple JSON objects concatenated together,
+          // try to coerce into a JSON array and take the first object as a best-effort fallback.
+          try {
+            const coerced = '[' + text.replace(/}\s*\{/g, '},{') + ']';
+            const arr = JSON.parse(coerced);
+            if (Array.isArray(arr) && arr.length > 0) {
+              data = arr[0];
+              console.warn('Parsed concatenated JSON from sampleUsageResponse.json; using first object');
+            } else {
+              throw parseErr;
+            }
+          } catch (_) {
+            throw parseErr;
+          }
+        }
+        showSimulatedBanner(apiErr);
+        console.info('Loaded sample data from sampleUsageResponse.json');
+      } catch (sampleErr) {
+        console.error('Failed to load sample data', sampleErr);
+        // If loading the bundled sample also fails, surface that error in the overlay.
+        // Avoid showing the original API 404 as the overlay source — prefer the sample error details.
+        showErrorOverlay(sampleErr || apiErr);
+        return; // nothing we can do
+      }
     }
 
     // totals
@@ -194,6 +224,46 @@ async function init(){
     console.error('Failed to load usage data',err);
     document.body.insertAdjacentHTML('beforeend','<div class="card">Failed to load usage data — open the console for details.</div>') ;
   }
+}
+
+function showSimulatedBanner(originalError) {
+  // Avoid duplicating the banner
+  if (document.getElementById('simulated-data-banner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'simulated-data-banner';
+  banner.className = 'simulated-data-banner';
+  banner.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 14h-2v-2h2v2zm0-4h-2V6h2v6z" fill="#8a5c00"/></svg>
+        <div>
+          <strong>Using simulated data</strong>
+          <div style="font-size:0.9rem;color:#6b4b00;">Connection to the Ingest API failed; data shown is from sampleUsageResponse.json.</div>
+        </div>
+      </div>
+      <div>
+        <button id="dismiss-simulated-banner" class="btn">Dismiss</button>
+      </div>
+    </div>
+  `;
+  // Basic inline styling so it looks acceptable without changing styles.css
+  banner.style.background = '#fff7ed';
+  banner.style.border = '1px solid #ffecd1';
+  banner.style.padding = '10px 14px';
+  banner.style.margin = '8px 12px';
+  banner.style.borderRadius = '6px';
+  banner.style.color = '#4a2e00';
+  banner.style.fontFamily = 'Inter, system-ui, sans-serif';
+  banner.style.fontSize = '0.95rem';
+
+  // Insert above the main container if present, otherwise at top of body
+  const container = document.querySelector('.container');
+  if (container && container.parentNode) container.parentNode.insertBefore(banner, container);
+  else document.body.insertAdjacentElement('afterbegin', banner);
+
+  document.getElementById('dismiss-simulated-banner').addEventListener('click', () => {
+    banner.remove();
+  });
 }
 
 // Listen for layout change messages from parent and apply without reloading
