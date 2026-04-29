@@ -183,9 +183,17 @@ async function init(){
     });
 
     // datasets chart (placed above organs)
-    const datasets = (data.datasets||[]).slice().sort((a,b)=>a.ds_count - b.ds_count);
-    const dsLabels = datasets.map(d=> `${d.dataset_type} (${d.dataset_provenance_level})`);
-    const dsValues = datasets.map(d=> d.ds_count);
+    // Aggregate datasets by `dataset_type` so primary + component are combined
+    const rawDatasets = (data.datasets || []);
+    const agg = rawDatasets.reduce((m, d) => {
+      const key = d.dataset_type || 'Unknown';
+      m[key] = (m[key] || 0) + (d.ds_count || 0);
+      return m;
+    }, {});
+    const datasets = Object.keys(agg).map(k => ({ dataset_type: k, ds_count: agg[k] }));
+    datasets.sort((a, b) => a.ds_count - b.ds_count);
+    const dsLabels = datasets.map(d => d.dataset_type);
+    const dsValues = datasets.map(d => d.ds_count);
     const dsColors = generatePalette(dsLabels.length);
     const dsCtx = document.getElementById('datasetsChart').getContext('2d');
     new Chart(dsCtx, {
@@ -198,7 +206,7 @@ async function init(){
         scales: { x: { ticks: { maxRotation: 40, minRotation: 20 } }, y: { beginAtZero: true, reverse: false } }
       }
     });
-    const totalDatasets = datasets.reduce((acc,d)=>acc+d.ds_count,0);
+    const totalDatasets = datasets.reduce((acc, d) => acc + d.ds_count, 0);
     document.getElementById('datasetsSummary').innerHTML = `<strong>${datasets.length}</strong> dataset types registered totaling <strong>${totalDatasets}</strong> datasets`;
 
     // organs chart
