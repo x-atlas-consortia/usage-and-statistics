@@ -275,7 +275,6 @@ card-portal {
 /* previously hid overflow for inner cap; we now allow overflow so cap can sit above the card */
 /* (no-op placeholder left intentionally) */
 
-
 /* Shell layout: sidebar (now top tabs) + iframe area */
 .shell {
   display: flex;
@@ -354,6 +353,7 @@ card-portal {
   white-space: nowrap;
   font-weight: 600;
   transition: all 160ms ease;
+  border:1px solid #353537;
 }
 
 .sidebar a:hover {
