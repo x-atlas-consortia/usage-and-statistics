@@ -7,162 +7,284 @@
   <link rel="icon" href="favicon.ico" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:slnt,wght@-10..0,100..900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* Allow dataportal tab to fill the page width */
+    .tabbed-card-outer.wide-tab {
+      /* Only remove border radius and shadow for the card, keep padding as in other tabs */
+    }
+    .tabbed-card-outer.wide-tab .tabbed-card {
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .tabbed-card-outer.wide-tab .tab-panel-header {
+      /* Make the header and iframe fill the card, minus padding */
+      margin-left: calc(-1 * var(--card-padding, 24px));
+      margin-right: calc(-1 * var(--card-padding, 24px));
+      width: calc(100% + 2 * var(--card-padding, 24px));
+      padding: 0;
+    }
+    .tabbed-card-outer.wide-tab iframe.lookerFrame {
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      height: 80vh;
+      display: block;
+      border: none;
+      margin: 0 auto;
+    }
+  </style>
 </head>
 <body>
-  <div class="shell">
-    <aside class="sidebar">
-      
-      <div class="brand">
-        <img src="hubmap-type-white250.png" alt="HuBMAP Logo">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="hubmap-type-white250.png" alt="HuBMAP Logo">
+    </div>
+  </aside>
+  <div class="container">
+    &nbsp;
+    <h1>HuBMAP Usage Information</h1>
+    <div class="tabbed-card-outer resizable-tab-content">
+      <div class="resize-handle" title="Drag to resize">
+        <svg width="18" height="48" viewBox="0 0 18 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="7" y="10" width="4" height="6" rx="2" fill="#bbb"/>
+          <rect x="7" y="21" width="4" height="6" rx="2" fill="#bbb"/>
+          <rect x="7" y="32" width="4" height="6" rx="2" fill="#bbb"/>
+        </svg>
       </div>
-      <nav>
-        <ul>
-          <li><a href="#" data-src="dashboard.html" class="nav-link active">Usage</a></li>
-          <li><a href="#" data-src="webportal.html?v=web-portal" class="nav-link">Web Portal</a></li>
-          <li><a href="#" data-src="dataportal.html?v=data-portal" class="nav-link">Data Portal</a></li>
-        </ul>
-      </nav>
-    </aside>
-
-    <main class="frame-area">
-      <iframe id="mainFrame" src="dashboard.html" frameborder="0"></iframe>
-    </main>
-  </div>
-
-    <script>
-    // Simple top-tab iframe loader. Ctrl/Cmd-click the Hubmap logo to toggle layout for the active tab.
-    document.addEventListener('DOMContentLoaded', function(){
-      const links = document.querySelectorAll('.nav-link');
-      const frame = document.getElementById('mainFrame');
-      // remember per-src layout state ("side" or "stack")
-      const layouts = {};
-
-      function buildSrcUrl(src, layoutOverride) {
-        const url = new URL(src, window.location.href);
-        // forward any parent query params (e.g. ?v=...) to the iframe unless already present
-        const parentParams = new URLSearchParams(window.location.search || '');
-        parentParams.forEach((val, key) => {
-          if (!url.searchParams.has(key)) url.searchParams.set(key, val);
-        });
-        // apply layout override if provided, otherwise use stored layout for this src
-        const layoutToApply = layoutOverride || layouts[src];
-        if (layoutToApply) url.searchParams.set('layout', layoutToApply === 'stack' ? 'stack' : 'side');
-        return url.toString();
-      }
-
-      // regular tab navigation (no Ctrl/Cmd toggling here)
-      function activateTab(src, options={push:true, layoutOverride:null}){
-        const match = Array.from(links).find(x => x.getAttribute('data-src') === src);
-        if (match) {
-          links.forEach(x => x.classList.remove('active'));
-          match.classList.add('active');
-        }
-        // load iframe with forwarded params + optional layout override
-        frame.src = buildSrcUrl(src, options.layoutOverride);
-        // update parent URL so active tab is reflected; preserve other params
-        try {
-          const params = new URLSearchParams(window.location.search || '');
-          params.set('src', src);
-          const newUrl = window.location.pathname + (params.toString() ? ('?' + params.toString()) : '');
-          if (options.push) history.pushState({ src }, '', newUrl);
-          else history.replaceState({ src }, '', newUrl);
-        } catch (err) {
-          // ignore history errors
-        }
-      }
-      links.forEach(l => l.addEventListener('click', e => {
-        e.preventDefault();
-        const src = l.getAttribute('data-src');
-        activateTab(src, { push: true });
-      }));
-
-      // Ctrl/Cmd + click on the brand toggles layout for the currently active tab
-      const brand = document.querySelector('.brand');
-      if (brand) {
-        brand.addEventListener('click', e => {
-          if (!(e.ctrlKey || e.metaKey)) return;
-          // find the active tab (fallback to first link)
-          const active = document.querySelector('.nav-link.active') || links[0];
-          if (!active) return;
-          const src = active.getAttribute('data-src');
-          const current = layouts[src] || 'side';
-          const next = current === 'side' ? 'stack' : 'side';
-          layouts[src] = next;
-          // If the iframe is currently showing that src, send a postMessage to ask the child to reapply layout
-          try {
-            const iframeWindow = frame && frame.contentWindow;
-            const frameUrl = frame && frame.src ? String(frame.src) : '';
-            const isSame = frameUrl && frameUrl.indexOf(src) !== -1;
-            if (iframeWindow && isSame) {
-              iframeWindow.postMessage({ type: 'set-layout', layout: next === 'stack' ? 'stack' : 'side' }, '*');
-            } else {
-              // fallback: navigate the iframe to the src with layout param
-              frame.src = buildSrcUrl(src, next === 'stack' ? 'stack' : 'side');
+          <style>
+            /* Draggable handle for resizable tab content */
+            .resizable-tab-content {
+              position: relative;
             }
-          } catch (err) {
-            // fallback to reloading if messaging fails
-            frame.src = buildSrcUrl(src, next === 'stack' ? 'stack' : 'side');
+            .resize-handle {
+              position: absolute;
+              top: 50px;
+              right: 0;
+              width: 18px;
+              height: fit-content;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              cursor: ew-resize;
+              z-index: 10;
+              background: linear-gradient(to left, rgba(220,220,220,0.7) 5%, transparent 100%);
+              border-radius: 0 8px 8px 0;
+              user-select: none;
+              transition: background 0.2s;
+            }
+            .resize-handle:hover svg rect {
+              fill: #888;
+            }
+            .resize-handle svg {
+              pointer-events: none;
+            }
+            /* Make sure the handle doesn't block the resize */
+            .resizable-tab-content {
+              padding-right: 18px;
+            }
+          </style>
+        <style>
+          /* Resizable tab content area */
+          .resizable-tab-content {
+            resize: horizontal;
+            overflow: auto;
+            min-width: 320px;
+            max-width: 100vw;
+            /* Let user drag the right edge to resize */
           }
-          // ensure active styling
-          links.forEach(x => x.classList.remove('active'));
-          active.classList.add('active');
+          /* Optional: cursor for the edge */
+          .resizable-tab-content {
+            box-sizing: border-box;
+          }
+          /* Prevent sidebar from overlapping */
+          @media (max-width: 900px) {
+            .resizable-tab-content {
+              min-width: 200px;
+            }
+          }
+        </style>
+      <div class="tab-bar dark">
+        <button class="tab-btn active" data-tab="totals-tab">Totals</button>
+        <button class="tab-btn" data-tab="datasets-tab">Datasets</button>
+        <button class="tab-btn" data-tab="organs-tab">Organs</button>
+        <button class="tab-btn" data-tab="dataportal-tab">Data Portal</button>
+      </div>
+      <section class="card tabbed-card" style="width:100%;box-sizing:border-box;">
+        <div class="tab-content" style="width:100%;box-sizing:border-box;">
+            <style>
+              /* Ensure tabbed-card-outer and its children expand/contract with resize */
+              .resizable-tab-content {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+              }
+              .resizable-tab-content .tabbed-card,
+              .resizable-tab-content .tab-content {
+                width: 100%;
+                box-sizing: border-box;
+              }
+            </style>
+          <div id="totals-tab" class="tab-panel active">
+            <span style="padding-bottom: 7px;">Downloaded Data <br /></span>
+            <table id="downloadedDataTable" class="data-table">
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Data Downloaded</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+          <div id="datasets-tab" class="tab-panel">
+            <div class="tab-panel-header">
+              <h3>Datasets</h3>
+              <div id="datasetsSummary" class="muted">Total Number of Datasets by Data Type</div>
+            </div>
+            <table id="datasetsTable" class="data-table">
+              <thead>
+                <tr>
+                  <th>Dataset Type</th>
+                  <th>Count</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+          <div id="organs-tab" class="tab-panel">
+            <div class="tab-panel-header">
+              <h3>Organs</h3>
+              <div id="organsSummary" class="muted">Total Number of Registered Organs by Type</div>
+            </div>
+            <table id="organsTable" class="data-table">
+              <thead>
+                <tr>
+                  <th>Organ</th>
+                  <th>Count</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+          <div id="dataportal-tab" class="tab-panel">
+            <div class="tab-panel-header">
+              <iframe class="lookerFrame" src="https://lookerstudio.google.com/embed/reporting/ec68fc96-3842-4256-8634-36a2f1407fe0/page/kIV1C" allowfullscreen></iframe>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+    
+  </div> 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="app.js"></script>
+  <script>
+    // Enable click-and-drag resizing with the handle
+    document.addEventListener('DOMContentLoaded', function() {
+      const resizable = document.querySelector('.resizable-tab-content');
+      const handle = document.querySelector('.resize-handle');
+      if (resizable && handle) {
+        let startX = 0;
+        let startWidth = 0;
+        let dragging = false;
+
+        handle.addEventListener('mousedown', function(e) {
+          e.preventDefault();
+          dragging = true;
+          startX = e.clientX;
+          startWidth = resizable.offsetWidth;
+          document.body.style.cursor = 'ew-resize';
+        });
+
+        document.addEventListener('mousemove', function(e) {
+          if (!dragging) return;
+          const dx = e.clientX - startX;
+          let newWidth = startWidth + dx;
+          // Clamp width
+          const minWidth = 320;
+          const maxWidth = window.innerWidth - 40;
+          newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+          resizable.style.width = newWidth + 'px';
+        });
+
+        document.addEventListener('mouseup', function() {
+          if (dragging) {
+            dragging = false;
+            document.body.style.cursor = '';
+          }
         });
       }
-      // if the page was opened with a top-level ?src=... param, auto-open that link
-      try {
-        const qs = new URLSearchParams(window.location.search || '');
-        const requested = qs.get('src');
-        if (requested) {
-          // use activateTab but don't push another history entry
-          activateTab(requested, { push: false });
-        }
-        else {
-          // otherwise ensure the initially-active tab is loaded with forwarded parent params
-          const active = document.querySelector('.nav-link.active') || links[0];
-          if (active) {
-            const src = active.getAttribute('data-src');
-            activateTab(src, { push: false });
+    });
+    // Tabbed card logic for in-page tabs + URL hash state
+    document.addEventListener('DOMContentLoaded', function() {
+      const tabBtns = document.querySelectorAll('.tab-bar .tab-btn');
+      const tabPanels = document.querySelectorAll('.tab-panel');
+
+      const validTabIds = new Set(Array.from(tabBtns, btn => btn.getAttribute('data-tab')));
+      const defaultTabId = 'totals-tab';
+
+      function activateTab(tabId) {
+        const targetTabId = validTabIds.has(tabId) ? tabId : defaultTabId;
+
+        // Remove active from all buttons and panels
+        tabBtns.forEach(b => b.classList.remove('active'));
+        tabPanels.forEach(p => p.classList.remove('active'));
+
+        // Add active to matching button and corresponding panel
+        const activeBtn = Array.from(tabBtns).find(btn => btn.getAttribute('data-tab') === targetTabId);
+        const activePanel = document.getElementById(targetTabId);
+
+        if (activeBtn) activeBtn.classList.add('active');
+        if (activePanel) activePanel.classList.add('active');
+
+        // Special: allow dataportal tab to fill width
+        const tabbedCardOuter = document.querySelector('.tabbed-card-outer');
+        if (tabbedCardOuter) {
+          if (targetTabId === 'dataportal-tab') {
+            tabbedCardOuter.classList.add('wide-tab');
+          } else {
+            tabbedCardOuter.classList.remove('wide-tab');
           }
         }
-      } catch (e) {
-        // ignore
       }
 
-      // respond to back/forward navigation — restore the src param as the active tab
-      window.addEventListener('popstate', function(ev){
-        try {
-          const qs = new URLSearchParams(window.location.search || '');
-          const requested = qs.get('src');
-          if (requested) activateTab(requested, { push: false });
-        } catch (err) {
-          // ignore
-        }
+      function syncTabFromUrl() {
+        const hashTabId = window.location.hash.replace('#', '');
+        activateTab(hashTabId || defaultTabId);
+      }
+
+      tabBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+          const tabId = btn.getAttribute('data-tab');
+          if (!tabId || !validTabIds.has(tabId)) return;
+
+          activateTab(tabId);
+
+          // Keep URL in sync so tab state is shareable/bookmarkable, but do not scroll
+          if (window.location.hash !== `#${tabId}`) {
+            if (history.replaceState) {
+              history.replaceState(null, '', `#${tabId}`);
+            } else {
+              window.location.hash = tabId; // fallback
+            }
+          }
+        });
       });
 
-      // accept layout change notifications from child frames so parent remembers user's choice
-      window.addEventListener('message', function(e){
-        try {
-          const msg = (typeof e.data === 'string') ? JSON.parse(e.data) : e.data;
-          if (!msg || msg.type !== 'layout-changed') return;
-          const rawSrc = msg.src || '';
-          // try to match a configured data-src by basename
-          const basename = rawSrc.split('/').pop();
-          let linkKey = null;
-          for (const l of links) {
-            const ds = l.getAttribute('data-src') || '';
-            if (ds === rawSrc || ds.indexOf(basename) !== -1) { linkKey = ds; break; }
-          }
-          if (!linkKey) {
-            const active = document.querySelector('.nav-link.active');
-            linkKey = active ? active.getAttribute('data-src') : null;
-          }
-          if (linkKey) layouts[linkKey] = (msg.layout === 'stack' ? 'stack' : 'side');
-        } catch (err) {
-          // ignore malformed messages
-        }
-      });
+      // Initialize from current URL
+      syncTabFromUrl();
+
+      // Handle browser back/forward hash navigation
+      window.addEventListener('hashchange', syncTabFromUrl);
     });
   </script>
 </body>
