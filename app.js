@@ -168,6 +168,39 @@ function generatePalette(n) {
   return out;
 }
 
+// Loading overlay helpers
+function showLoadingOverlay(message) {
+  if (document.getElementById('loading-overlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'loading-overlay';
+  overlay.className = 'loading-overlay';
+  const wrap = document.createElement('div');
+  wrap.className = 'spinner-wrap';
+  const spinner = document.createElement('div');
+  spinner.className = 'spinner';
+  spinner.setAttribute('role', 'status');
+  spinner.setAttribute('aria-live', 'polite');
+  spinner.setAttribute('aria-label', message || 'Loading');
+  const text = document.createElement('div');
+  text.className = 'loading-text';
+  text.textContent = message || 'Loading…';
+  const sr = document.createElement('span');
+  sr.className = 'visually-hidden';
+  sr.textContent = message || 'Loading';
+  wrap.appendChild(spinner);
+  wrap.appendChild(text);
+  wrap.appendChild(sr);
+  overlay.appendChild(wrap);
+  document.body.appendChild(overlay);
+  document.body.classList.add('dimmed');
+}
+
+function hideLoadingOverlay() {
+  const el = document.getElementById('loading-overlay');
+  if (el) el.remove();
+  document.body.classList.remove('dimmed');
+}
+
 async function init(){
   // ...existing code...
   // Remove any existing overlays from previous attempts
@@ -181,6 +214,9 @@ async function init(){
     const timeout = setTimeout(() => controller.abort(), ms);
     return fetch(url, { signal }).finally(() => clearTimeout(timeout));
   }
+
+  // Show spinner while we attempt to load data (will be hidden in finally)
+  showLoadingOverlay('Loading usage data…');
 
   try{
     // apply layout param (allow parent to toggle between side-by-side and stacked)
@@ -355,6 +391,8 @@ async function init(){
   }catch(err){
     console.error('Failed to load usage data',err);
     showErrorOverlay(err);
+  } finally {
+    hideLoadingOverlay();
   }
 }
 

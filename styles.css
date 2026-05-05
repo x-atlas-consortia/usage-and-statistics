@@ -710,3 +710,57 @@ body.dimmed .shell {
   color: #3730a3;
   border: 1px solid #c7d2fe;
 }
+
+/* Loading spinner overlay */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  pointer-events: auto;
+}
+
+.loading-overlay .spinner-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255,255,255,0.0);
+  padding: 6px;
+  border-radius: 8px;
+}
+
+.loading-overlay .spinner {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 6px solid rgba(68,74,101,0.12);
+  border-top-color: #444a65;
+  animation: loading-spin 1s linear infinite;
+  box-shadow: 0 6px 20px rgba(68,74,101,0.08);
+}
+
+.loading-overlay .loading-text {
+  font-size: 0.95rem;
+  color: #222;
+  font-weight: 600;
+}
+
+@keyframes loading-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
