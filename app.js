@@ -133,12 +133,13 @@ window.addEventListener('DOMContentLoaded', function(){
 // app.js — minimal static site behavior
 
 function formatBytes(bytes) {
-  if (!bytes || bytes === 0) return '0 B';
+  if (!bytes || bytes === 0) return `<span class="downloaded-bold">0.00</span><sub class="sup">B</sub>`;
   const k = 1024;
   const sizes = ['B','KB','MB','GB'];
   let i = Math.floor(Math.log(bytes) / Math.log(k));
   if (i > 3) i = 3; // Cap at GB
-  return `<span class=\"downloaded-bold monospace\">${parseFloat((bytes / Math.pow(k, i)).toFixed(2))}</span> <span class=\"monospace\">${sizes[i]}</span>`;
+  const value = (bytes / Math.pow(k, i)).toFixed(2);
+  return `<span class="downloaded-bold">${value}</span><span class="sup">${sizes[i]}</span>`;
 }
 
 function generatePalette(n) {
@@ -231,6 +232,17 @@ async function init(){
     } catch (e) {
       // ignore URL parsing errors
     }
+    // Ensure the resizable tab area starts at up to 1200px (or viewport width minus container margins)
+    try {
+      const resizable = document.querySelector('.resizable-tab-content');
+      if (resizable) {
+        const containerSideMargins = 56; // matches .container margin: 28px on each side
+        const desired = Math.min(1200, Math.max(320, window.innerWidth - containerSideMargins));
+        resizable.style.width = desired + 'px';
+      }
+    } catch (e) {
+      // ignore
+    }
     let data;
     try{
       const apiRes = await fetchWithTimeout(API_URL, 30000);
@@ -272,6 +284,21 @@ async function init(){
       }
     }
 
+    // Use `last_touch` from the returned data to populate the page header
+    try {
+      const rawLast = data && (data.last_touch || data.lastTouch || data.lastGenerated || null);
+      if (rawLast) {
+        const d = new Date(rawLast);
+        if (!isNaN(d)) {
+          const formatted = d.toLocaleString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+          const lastEl = document.getElementById('lastTouchDate');
+          if (lastEl) lastEl.textContent = formatted;
+        }
+      }
+    } catch (e) {
+      // ignore formatting errors
+    }
+
     // monthly (sorted) and totals
     const monthly = (data.monthly_transfer_totals||[]).slice().sort((a,b)=> {
       const da = new Date(a.month);
@@ -283,10 +310,12 @@ async function init(){
     const values = monthly.map(m=>m.bytes_downloaded || 0);
     const totalBytes = values.reduce((s,v)=> s + (v||0), 0);
     const parts = (function(){
-      if(totalBytes===0) return {num:'0',unit:'B'};
+      if(totalBytes===0) return {num:'0.00',unit:'B'};
       const k=1024; const sizes=['B','KB','MB','GB','TB'];
-      const i=Math.floor(Math.log(totalBytes)/Math.log(k));
-      const num=parseFloat((totalBytes/Math.pow(k,i)).toFixed(2));
+      let i=Math.floor(Math.log(totalBytes)/Math.log(k));
+      if (i < 0) i = 0;
+      if (i >= sizes.length) i = sizes.length - 1;
+      const num = (totalBytes/Math.pow(k,i)).toFixed(2);
       return {num:String(num), unit:sizes[i]};
     })();
 
@@ -301,7 +330,7 @@ async function init(){
       const tbody = downloadedDataTable.querySelector('tbody');
       if (tbody) {
         let downloadedRows = [];
-        downloadedRows.push(`<tr><td style=\"font-weight:600;\">ACCUMULATED TOTAL</td><td>${formatBytes(totalBytes)}</td></tr>`);
+        downloadedRows.push(`<tr><td style=\"font-weight:600;\">ACCUMULATED TOTAL</td><td class="accumulatedTotal">${formatBytes(totalBytes)}</td></tr>`);
         downloadedRows = downloadedRows.concat(monthly.map(m => {
           const d = new Date(m.month);
           let label;
@@ -312,7 +341,7 @@ async function init(){
           } else {
             label = String(m.month);
           }
-          return `<tr><td>${label}</td><td>${formatBytes(m.bytes_downloaded)}</td></tr>`;
+          return `<tr><td>${label}</td><td class="numFormat">${formatBytes(m.bytes_downloaded)}</td></tr>`;
         }));
         tbody.innerHTML = downloadedRows.join('');
       }
@@ -340,10 +369,16 @@ async function init(){
     function formatMonthLabel(s){ const d = new Date(s); if (!isNaN(d)) return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short' }); return String(s); }
     const startLabel = firstWithValue ? formatMonthLabel(firstWithValue.month) : '—';
     const endLabel = lastWithValue ? formatMonthLabel(lastWithValue.month) : '—';
+    // Date range for the Downloaded Data tab: use first and last available months in the dataset
+    const rangeStart = (monthly && monthly.length > 0) ? formatMonthLabel(monthly[0].month) : '—';
+    const rangeEnd = (monthly && monthly.length > 0) ? formatMonthLabel(monthly[monthly.length - 1].month) : '—';
     const startEl = document.getElementById('startDate');
     const endEl = document.getElementById('endDate');
     if (startEl) startEl.textContent = startLabel;
     if (endEl) endEl.textContent = endLabel;
+    // Populate the downloaded-data tab range label (e.g. "May 2020 - Jun 2026")
+    const downloadedRangeEl = document.getElementById('downloadedRange');
+    if (downloadedRangeEl) downloadedRangeEl.textContent = `${rangeStart} - ${rangeEnd}`;
     // also populate any cap-specific date placeholders inside card caps
     document.querySelectorAll('.cap-start').forEach(el => { el.textContent = startLabel });
     document.querySelectorAll('.cap-end').forEach(el => { el.textContent = endLabel });

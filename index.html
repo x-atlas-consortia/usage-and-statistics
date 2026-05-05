@@ -17,6 +17,9 @@
     <div class="brand">
       <img src="hubmap-type-white250.png" alt="HuBMAP Logo">
     </div>
+    <div class="lastTouch">
+      <span class="touchLabel">Last Generated: </span><span id="lastTouchDate"></span>
+    </div>
   </aside>
   <div class="container">
     &nbsp;
@@ -31,7 +34,7 @@
       </div>
         
       <div class="tab-bar dark">
-        <button class="tab-btn active" data-tab="totals-tab">Totals</button>
+        <button class="tab-btn active" data-tab="totals-tab">Downloaded Data</button>
         <button class="tab-btn" data-tab="datasets-tab">Datasets</button>
         <button class="tab-btn" data-tab="organs-tab">Organs</button>
         <button class="tab-btn" data-tab="dataportal-tab">Data Portal</button>
@@ -39,7 +42,10 @@
       <section class="card tabbed-card">
         <div class="tab-content">
           <div id="totals-tab" class="tab-panel active">
-            <span style="padding-bottom: 7px;">Downloaded Data <br /></span>
+            <div class="tab-panel-header">
+              <h3>Downloaded Data</h3>
+              <div id="downloadedRange" class="muted"></div>
+            </div>
             <table id="downloadedDataTable" class="data-table">
               <thead>
                 <tr>
