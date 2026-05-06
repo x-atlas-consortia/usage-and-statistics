@@ -362,10 +362,18 @@ h1 {
   border-bottom: 2px solid #e0e3ef;
 }
 .data-table tbody tr:nth-child(even) {
-  background: #f8f9fb;
+  /* Very subtle zebra striping (soft blue-gray at ~2% opacity) */
+  background-color: rgba(68,74,101,0.1);
 }
 .data-table tbody tr:nth-child(odd) {
-  background: #fff;
+  background-color: #ffffff;
+}
+.data-table tbody tr {
+  transition: background-color 120ms ease;
+}
+.data-table tbody tr:hover {
+  /* Slightly stronger highlight on hover for discoverability */
+  background-color: rgba(68,74,101,0.04);
 }
 .data-table td {
   border-bottom: 1px solid #ececf2;
@@ -400,7 +408,7 @@ h1 {
 }
 #downloadedDataTable tr td.accumulatedTotal {
   font-variant-numeric: tabular-nums;
-  text-align: left ;
+  text-align: right ;
   font-size: 1rem !important;
   font-weight: 500 !important;
   line-height: 1.66;
@@ -541,7 +549,11 @@ h1 {
   letter-spacing: -0.03em;
 }
 
-.downloaded-bold{
+.downloaded-bold {
+  font-weight: 400;
+}
+.size-unit {
+  margin-left: 4px;
   font-weight: 700;
 }
 
@@ -731,4 +743,25 @@ body.dimmed .shell {
 @keyframes loading-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+#renderModeIndicator{
+  float: right;
+}
+
+.tdHead{
+  justify-content: space-between;
+  display: flex;
+  gap: 8px;
+  width:100%;
+}
+#baseIndicator.muted{
+  font-size: 0.75rem;
+  margin-right: 4px;
+}
+
+
+/* Right-align the Downloaded Data header which now shows TB in the label */
+#downloadedDataTable thead th.downloaded-header {
+  text-align: right;
 }

@@ -9,7 +9,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:slnt,wght@-10..0,100..900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
-  <!-- Styles moved to styles.css -->
 </head>
 <body>
 
@@ -43,14 +42,21 @@
         <div class="tab-content">
           <div id="totals-tab" class="tab-panel active">
             <div class="tab-panel-header">
-              <h3>Downloaded Data</h3>
-              <div id="downloadedRange" class="muted"></div>
+              <div class="tdHead">
+                <h3 style="margin:0;">Downloaded Data</h3>
+                
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;justify-content:space-between;margin-top:6px;">
+                <div class="tdHead">
+                  <div id="downloadedRange" class="muted"></div>
+                </div>
+              </div>
             </div>
             <table id="downloadedDataTable" class="data-table">
               <thead>
                 <tr>
                   <th>Month</th>
-                  <th>Data Downloaded</th>
+                  <th class="downloaded-header">Data Downloaded (TB)</th>
                 </tr>
               </thead>
               <tbody>
@@ -94,7 +100,8 @@
           </div>
           <div id="dataportal-tab" class="tab-panel">
             <div class="tab-panel-header">
-              <iframe class="lookerFrame" src="https://lookerstudio.google.com/embed/reporting/ec68fc96-3842-4256-8634-36a2f1407fe0/page/kIV1C" allowfullscreen></iframe>
+              <!-- Lazy-load: store Looker Studio URL in data-src and only set `src` when the tab is activated -->
+              <iframe class="lookerFrame" data-src="https://lookerstudio.google.com/embed/reporting/ec68fc96-3842-4256-8634-36a2f1407fe0/page/kIV1C" loading="lazy" allowfullscreen title="Looker Studio report"></iframe>
             </div>
           </div>
         </div>
@@ -103,6 +110,7 @@
     
   </div> 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/filesize@8.0.3/lib/filesize.min.js"></script>
   <script src="app.js"></script>
   <script>
     // Enable click-and-drag resizing with the handle
@@ -166,10 +174,20 @@
         // Special: allow dataportal tab to fill width
         const tabbedCardOuter = document.querySelector('.tabbed-card-outer');
         if (tabbedCardOuter) {
+          const iframe = document.querySelector('.lookerFrame');
           if (targetTabId === 'dataportal-tab') {
             tabbedCardOuter.classList.add('wide-tab');
+            // attach iframe src only when tab is activated to avoid background network activity
+            if (iframe && !iframe.getAttribute('src')) {
+              const src = iframe.getAttribute('data-src');
+              if (src) iframe.setAttribute('src', src);
+            }
           } else {
             tabbedCardOuter.classList.remove('wide-tab');
+            // unload iframe to stop background requests when leaving the tab
+            if (iframe && iframe.getAttribute('src')) {
+              iframe.removeAttribute('src');
+            }
           }
         }
       }

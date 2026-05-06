@@ -130,16 +130,74 @@ window.addEventListener('DOMContentLoaded', function(){
     }
   });
 });
-// app.js — minimal static site behavior
 
 function formatBytes(bytes) {
-  if (!bytes || bytes === 0) return `<span class="downloaded-bold">0.00</span><sub class="sup">B</sub>`;
-  const k = 1024;
-  const sizes = ['B','KB','MB','GB'];
-  let i = Math.floor(Math.log(bytes) / Math.log(k));
-  if (i > 3) i = 3; // Cap at GB
-  const value = (bytes / Math.pow(k, i)).toFixed(2);
-  return `<span class="downloaded-bold">${value}</span><span class="sup">${sizes[i]}</span>`;
+  // Prefer using the `filesize` library if available (browser global added via CDN).
+  if (bytes === null || bytes === undefined || bytes === '') return '';
+  // allow numeric strings
+  const n = Number(bytes);
+  if (Number.isNaN(n)) return String(bytes);
+
+  // determine render mode: 'smart' (default) or 'rounded'
+  const mode = (typeof window !== 'undefined' && window.downloadBytesRenderMode) ? window.downloadBytesRenderMode : 'smart';
+
+  // If rounded mode is requested, always round to the nearest whole number for the unit
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+  function formatWithUnit(value, roundWhole, baseFactor = 1024) {
+    let i = 0;
+    while (value >= baseFactor && i < sizes.length - 1) { value /= baseFactor; i++; }
+    const display = roundWhole ? Math.round(value) : ((value < 10 && value % 1 !== 0) ? (Math.round(value * 10) / 10) : Math.round(value));
+    return `<span class="downloaded-bold">${display}</span><span class="size-unit">${sizes[i]}</span>`;
+  }
+
+  if (mode === 'rounded') {
+    // rounded in SI (decimal) units
+    return formatWithUnit(n, true, 1000);
+  }
+
+  // special TB-only mode (SI): always express value in TB with two decimals (1 TB = 10^12 bytes)
+  if (mode === 'tb') {
+    const tb = n / Math.pow(1000, 4);
+    const display = tb.toFixed(2);
+    return `<span class="downloaded-bold">${display}</span><span class="size-unit">TB</span>`;
+  }
+
+  // IEC mode: show TiB using binary base (2^40) and 'TiB' unit
+  if (mode === 'iec') {
+    const tib = n / Math.pow(1024, 4);
+    const display = (Math.round(tib * 100) / 100).toFixed(2);
+    return `<span class="downloaded-bold">${display}</span><span class="size-unit">TiB</span>`;
+  }
+
+  // raw mode: display the raw integer bytes value with unit 'B'
+  if (mode === 'raw') {
+    try {
+      const fmt = new Intl.NumberFormat().format(Math.round(n));
+      return `<span class="downloaded-bold">${fmt}</span><span class="size-unit">B</span>`;
+    } catch (e) {
+      return `<span class="downloaded-bold">${Math.round(n)}</span><span class="size-unit">B</span>`;
+    }
+  }
+
+  // smart mode: prefer using global `filesize` if provided (added via CDN in index.html)
+  try {
+    if (typeof window !== 'undefined' && typeof window.filesize === 'function') {
+      // use decimal (SI) units for the smart mode so it matches user expectation for transfer totals
+      const formatted = window.filesize(n, { base: 10, round: 2, spacer: ' ' });
+      // filesize may use non-breaking spaces; normalize and split into value + unit
+      const out = String(formatted).replace(/\u00A0/g, ' ').trim();
+      const parts = out.split(/\s+/);
+      const numPart = parts.shift() || '';
+      const unitPart = parts.join(' ') || '';
+      if (unitPart) return `<span class="downloaded-bold">${numPart}</span><span class="size-unit">${unitPart}</span>`;
+      return `<span class="downloaded-bold">${out}</span>`;
+    }
+  } catch (e) {
+    // fall through to fallback
+  }
+
+  // Fallback to human-readable formatter
+  return formatWithUnit(n, false);
 }
 
 function generatePalette(n) {
@@ -208,7 +266,7 @@ async function init(){
   const existing = document.getElementById('error-overlay');
   if (existing) existing.remove();
 
-  const API_URL = 'http://localhost:8484/publication-and-usage-stats';
+  const API_URL = 'http://10.4.119.74:8484/publication-and-usage-stats';
   function fetchWithTimeout(url, ms) {
     const controller = new AbortController();
     const signal = controller.signal;
@@ -310,6 +368,17 @@ async function init(){
     const values = monthly.map(m=>m.bytes_downloaded || 0);
     const totalBytes = values.reduce((s,v)=> s + (v||0), 0);
     const parts = (function(){
+      try {
+        if (typeof filesize === 'function') {
+          const out = String(filesize(totalBytes || 0, { base: 2, round: 2, spacer: ' ' }));
+          const p = out.split(/\s+/);
+          const n = p[0] ? Number(p[0]) : 0;
+          const u = p.slice(1).join('') || 'B';
+          return { num: Number.isFinite(n) ? n.toFixed(2) : String(p[0] || '0.00'), unit: u };
+        }
+      } catch (e) {
+        // fall through to fallback
+      }
       if(totalBytes===0) return {num:'0.00',unit:'B'};
       const k=1024; const sizes=['B','KB','MB','GB','TB'];
       let i=Math.floor(Math.log(totalBytes)/Math.log(k));
@@ -330,7 +399,8 @@ async function init(){
       const tbody = downloadedDataTable.querySelector('tbody');
       if (tbody) {
         let downloadedRows = [];
-        downloadedRows.push(`<tr><td style=\"font-weight:600;\">ACCUMULATED TOTAL</td><td class="accumulatedTotal">${formatBytes(totalBytes)}</td></tr>`);
+        function tbValue(n) { const v = Number(n) || 0; return (v / 1e12).toFixed(2); }
+        downloadedRows.push(`<tr><td style="font-weight:600;">ACCUMULATED TOTAL</td><td class="accumulatedTotal numFormat" data-bytes="${totalBytes}">${tbValue(totalBytes)}</td></tr>`);
         downloadedRows = downloadedRows.concat(monthly.map(m => {
           const d = new Date(m.month);
           let label;
@@ -341,9 +411,34 @@ async function init(){
           } else {
             label = String(m.month);
           }
-          return `<tr><td>${label}</td><td class="numFormat">${formatBytes(m.bytes_downloaded)}</td></tr>`;
+          return `<tr><td>${label}</td><td class="numFormat" data-bytes="${m.bytes_downloaded}">${tbValue(m.bytes_downloaded)}</td></tr>`;
         }));
         tbody.innerHTML = downloadedRows.join('');
+        // helper to (re)render cells from their raw `data-bytes` attribute
+        function renderDownloadedCells() {
+          tbody.querySelectorAll('td[data-bytes]').forEach(td => {
+            const raw = td.getAttribute('data-bytes');
+            // Always display as TB with 2 decimal places and no unit label
+            const tb = ((Number(raw) || 0) / 1e12).toFixed(2);
+            td.innerHTML = `<span class="downloaded-bold">${tb}</span>`;
+            // expose the raw numeric bytes value on hover (tooltip) for each cell and its row
+            const rawStr = (raw === null || raw === undefined) ? '' : String(raw);
+            try {
+              // Ensure both the cell and its row show the same tooltip format
+              const formatted = rawStr ? Intl.NumberFormat().format(Number(rawStr)) : '';
+              const tooltip = formatted ? (`bytes: ${formatted}`) : '';
+              td.setAttribute('title', tooltip);
+              const row = td.closest && td.closest('tr');
+              if (row) row.setAttribute('title', tooltip);
+            } catch (e) {
+              // ignore DOM errors
+            }
+          });
+        }
+        
+        // initial render (ensures formatting uses current mode)
+        renderDownloadedCells();
+
       }
     }
 
