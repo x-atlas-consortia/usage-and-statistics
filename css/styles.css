@@ -170,6 +170,7 @@ h1 {
 
 .tab-panel-header {
   margin-bottom: 1em;
+  margin-top: 10px;
 }
 
 .tab-panel-header h3 {
@@ -503,6 +504,14 @@ h1 {
   padding: 0 12px;
   z-index: 50;
 }
+.sidebar .brand #hubmapLogo {
+  height: 30px;
+}
+.sidebar .lastTouch {
+  font-size: 0.8em;
+  display: flex;
+  flex-direction: column;
+}
 
 .frame-area {
   flex: 1;
@@ -545,21 +554,6 @@ h1 {
   min-height: 0;
   border: 0;
   padding: 10px;
-}
-
-/* ===== Utilities ===== */
-#win31-toast {
-  position: fixed;
-  right: 12px;
-  top: 12px;
-  background: #ffffe0;
-  color: #000;
-  border: 2px solid #000;
-  padding: 6px 10px;
-  font-weight: 700;
-  z-index: 99999;
-  font-family: 'MS Sans Serif', Tahoma, Arial, sans-serif;
-  border-radius: 2px;
 }
 
 .site-footer {

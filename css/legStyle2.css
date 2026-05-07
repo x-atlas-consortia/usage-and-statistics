@@ -1,5 +1,3 @@
-/* Extracted from styles.css — retro DOS theme (moved) */
-
 body.dos {
   background: #000 !important;
   color: #33ff33 !important;
@@ -11,7 +9,7 @@ body.dos .sidebar {
 }
 
 body.dos .sidebar .lastTouch {
-  font-size: 0.3em;
+  /* font-size: 0.3em; */
   color: #6eff57 !important
 }
 

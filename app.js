@@ -326,7 +326,46 @@ async function init(){
       }
     }
 
-
+    // chart — ensure monthly data is sorted chronologically (oldest -> newest)
+    // reuse the already sorted 'monthly' variable above
+    const chartMonthly = monthly; // or just use 'monthly' directly below
+    const labels = chartMonthly.map(m => {
+      const d = new Date(m.month);
+      if (!isNaN(d)) return d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
+      return String(m.month);
+    });
+    const chartValues = chartMonthly.map(m=>m.bytes_downloaded);
+    // compute cumulative totals (running sum) so chart shows cumulative bytes over time
+    let running = 0;
+    const cumulativeValues = values.map(v => { running += (v||0); return running; });
+    // set startDate and endDate based on earliest/latest monthly entries with a value
+    const firstWithValue = monthly.find(m => m.bytes_downloaded && m.bytes_downloaded > 0) || null;
+    let lastWithValue = null;
+    for (let i = monthly.length - 1; i >= 0; i--) {
+      const m = monthly[i];
+      if (m && m.bytes_downloaded && m.bytes_downloaded > 0) { lastWithValue = m; break; }
+    }
+    function formatMonthLabel(s){ const d = new Date(s); if (!isNaN(d)) return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short' }); return String(s); }
+    const startLabel = firstWithValue ? formatMonthLabel(firstWithValue.month) : '—';
+    const endLabel = lastWithValue ? formatMonthLabel(lastWithValue.month) : '—';
+    // Date range for the Downloaded Data tab: use first and last available months in the dataset
+    const rangeStart = (monthly && monthly.length > 0) ? formatMonthLabel(monthly[0].month) : '—';
+    const rangeEnd = (monthly && monthly.length > 0) ? formatMonthLabel(monthly[monthly.length - 1].month) : '—';
+    const startEl = document.getElementById('startDate');
+    const endEl = document.getElementById('endDate');
+    if (startEl) startEl.textContent = startLabel;
+    if (endEl) endEl.textContent = endLabel;
+    // Populate the downloaded-data tab range label (e.g. "May 2020 - Jun 2026")
+    const downloadedRangeEl = document.getElementById('downloadedRange');
+    if (downloadedRangeEl) downloadedRangeEl.textContent = `${rangeStart} - ${rangeEnd}`;
+    // also populate any cap-specific date placeholders inside card caps
+    document.querySelectorAll('.cap-start').forEach(el => { el.textContent = startLabel });
+    document.querySelectorAll('.cap-end').forEach(el => { el.textContent = endLabel });
+    // append the date range to the total label for context
+    const totalLabelEl = document.getElementById('totalLabel');
+    if (totalLabelEl) {
+      totalLabelEl.innerHTML = `Total data consumed from the portal <small class="small">between ${startLabel} and ${endLabel}</small>`;
+    }
 
     // datasets table
     // Aggregate datasets by `dataset_type` so primary + component are combined
