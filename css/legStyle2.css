@@ -67,6 +67,7 @@ body.dos .data-table tbody tr:hover {
 body.dos #downloadedDataTable {
   border-color: #33ff33 !important
 }
+
 body.dos #downloadedDataTable.data-table th {
   background-color: #111 !important
 }

@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -12,6 +13,7 @@
   <link rel="stylesheet" href="css/legStyle1.css" />
   <link rel="stylesheet" href="css/legStyle2.css" />
 </head>
+
 <body>
 
   <aside class="sidebar">
@@ -28,12 +30,12 @@
     <div class="tabbed-card-outer resizable-tab-content">
       <div class="resize-handle" title="Drag to resize">
         <svg width="18" height="48" viewBox="0 0 18 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="7" y="10" width="4" height="6" rx="2" fill="#bbb"/>
-          <rect x="7" y="21" width="4" height="6" rx="2" fill="#bbb"/>
-          <rect x="7" y="32" width="4" height="6" rx="2" fill="#bbb"/>
+          <rect x="7" y="10" width="4" height="6" rx="2" fill="#bbb" />
+          <rect x="7" y="21" width="4" height="6" rx="2" fill="#bbb" />
+          <rect x="7" y="32" width="4" height="6" rx="2" fill="#bbb" />
         </svg>
       </div>
-        
+
       <div class="tab-bar dark">
         <button class="tab-btn active" data-tab="totals-tab">Downloaded Data</button>
         <button class="tab-btn" data-tab="datasets-tab">Datasets</button>
@@ -45,11 +47,11 @@
           <div id="totals-tab" class="tab-panel active">
             <div class="tab-panel-header">
               <div class="tdHead">
-                <h3 >Downloaded Data</h3>
+                <h3>Downloaded Data</h3>
               </div>
               <div id="downloadedRange" class="muted"></div>
             </div>
-            
+
             <table id="downloadedDataTable" class="data-table">
               <thead>
                 <tr>
@@ -99,153 +101,156 @@
           <div id="dataportal-tab" class="tab-panel">
             <div class="tab-panel-header">
               <!-- Lazy-load: store Looker Studio URL in data-src and only set `src` when the tab is activated -->
-              <iframe class="lookerFrame" data-src="https://lookerstudio.google.com/embed/reporting/ec68fc96-3842-4256-8634-36a2f1407fe0/page/kIV1C" loading="lazy" allowfullscreen title="Looker Studio report"></iframe>
+              <iframe class="lookerFrame"
+                data-src="https://lookerstudio.google.com/embed/reporting/ec68fc96-3842-4256-8634-36a2f1407fe0/page/kIV1C"
+                loading="lazy" allowfullscreen title="Looker Studio report"></iframe>
             </div>
           </div>
         </div>
       </section>
     </div>
-    
-  </div> 
+
+  </div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/filesize@8.0.3/lib/filesize.min.js"></script>
   <script src="envs.js"></script>
   <script src="app.js"></script>
   <script>
     // Enable click-and-drag resizing with the handle
-    document.addEventListener('DOMContentLoaded', function() {
-      const resizable = document.querySelector('.resizable-tab-content');
-      const handle = document.querySelector('.resize-handle');
-      if (resizable && handle) {
-        let startX = 0;
-        let startWidth = 0;
-        let dragging = false;
+    document.addEventListener('DOMContentLoaded',function() {
+      const resizable=document.querySelector('.resizable-tab-content');
+      const handle=document.querySelector('.resize-handle');
+      if(resizable&&handle) {
+        let startX=0;
+        let startWidth=0;
+        let dragging=false;
 
-        handle.addEventListener('mousedown', function(e) {
+        handle.addEventListener('mousedown',function(e) {
           e.preventDefault();
-          dragging = true;
-          startX = e.clientX;
-          startWidth = resizable.offsetWidth;
-          document.body.style.cursor = 'ew-resize';
+          dragging=true;
+          startX=e.clientX;
+          startWidth=resizable.offsetWidth;
+          document.body.style.cursor='ew-resize';
         });
 
-        document.addEventListener('mousemove', function(e) {
-          if (!dragging) return;
-          const dx = e.clientX - startX;
-          let newWidth = startWidth + dx;
+        document.addEventListener('mousemove',function(e) {
+          if(!dragging) return;
+          const dx=e.clientX-startX;
+          let newWidth=startWidth+dx;
           // Clamp width
-          const minWidth = 320;
-          const maxWidth = window.innerWidth - 40;
-          newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
-          resizable.style.width = newWidth + 'px';
+          const minWidth=320;
+          const maxWidth=window.innerWidth-40;
+          newWidth=Math.max(minWidth,Math.min(maxWidth,newWidth));
+          resizable.style.width=newWidth+'px';
         });
 
-        document.addEventListener('mouseup', function() {
-          if (dragging) {
-            dragging = false;
-            document.body.style.cursor = '';
+        document.addEventListener('mouseup',function() {
+          if(dragging) {
+            dragging=false;
+            document.body.style.cursor='';
           }
         });
       }
     });
     // Tabbed card logic for in-page tabs + URL query state (no anchor scroll)
-    document.addEventListener('DOMContentLoaded', function() {
-      const tabBtns = document.querySelectorAll('.tab-bar .tab-btn');
-      const tabPanels = document.querySelectorAll('.tab-panel');
+    document.addEventListener('DOMContentLoaded',function() {
+      const tabBtns=document.querySelectorAll('.tab-bar .tab-btn');
+      const tabPanels=document.querySelectorAll('.tab-panel');
 
-      const validTabIds = new Set(Array.from(tabBtns, btn => btn.getAttribute('data-tab')));
-      const defaultTabId = 'totals-tab';
+      const validTabIds=new Set(Array.from(tabBtns,btn => btn.getAttribute('data-tab')));
+      const defaultTabId='totals-tab';
 
       function activateTab(tabId) {
-        const targetTabId = validTabIds.has(tabId) ? tabId : defaultTabId;
+        const targetTabId=validTabIds.has(tabId)? tabId:defaultTabId;
 
         // Remove active from all buttons and panels
         tabBtns.forEach(b => b.classList.remove('active'));
         tabPanels.forEach(p => p.classList.remove('active'));
 
         // Add active to matching button and corresponding panel
-        const activeBtn = Array.from(tabBtns).find(btn => btn.getAttribute('data-tab') === targetTabId);
-        const activePanel = document.getElementById(targetTabId);
+        const activeBtn=Array.from(tabBtns).find(btn => btn.getAttribute('data-tab')===targetTabId);
+        const activePanel=document.getElementById(targetTabId);
 
-        if (activeBtn) activeBtn.classList.add('active');
-        if (activePanel) activePanel.classList.add('active');
+        if(activeBtn) activeBtn.classList.add('active');
+        if(activePanel) activePanel.classList.add('active');
 
         // Special: allow dataportal tab to fill width
-        const tabbedCardOuter = document.querySelector('.tabbed-card-outer');
-        if (tabbedCardOuter) {
-          const iframe = document.querySelector('.lookerFrame');
-          if (targetTabId === 'dataportal-tab') {
+        const tabbedCardOuter=document.querySelector('.tabbed-card-outer');
+        if(tabbedCardOuter) {
+          const iframe=document.querySelector('.lookerFrame');
+          if(targetTabId==='dataportal-tab') {
             tabbedCardOuter.classList.add('wide-tab');
             // attach iframe src only when tab is activated to avoid background network activity
-            if (iframe && !iframe.getAttribute('src')) {
+            if(iframe&&!iframe.getAttribute('src')) {
               // create and show an inline spinner overlay while the iframe loads
-              const header = document.getElementById('dataportal-tab');
-              if (header) {
+              const header=document.getElementById('dataportal-tab');
+              if(header) {
                 // remove any existing overlay first
-                const existing = header.querySelector('.iframe-loading');
-                if (existing) existing.remove();
-                const overlay = document.createElement('div');
-                overlay.className = 'iframe-loading';
-                overlay.innerHTML = '<div class="spinner-wrap"><div class="spinner" aria-hidden="true"></div><div class="loading-text">Loading Data Portal…</div></div>';
+                const existing=header.querySelector('.iframe-loading');
+                if(existing) existing.remove();
+                const overlay=document.createElement('div');
+                overlay.className='iframe-loading';
+                overlay.innerHTML='<div class="spinner-wrap"><div class="spinner" aria-hidden="true"></div><div class="loading-text">Loading Data Portal…</div></div>';
                 header.appendChild(overlay);
 
                 // attach load/error handlers to the iframe to remove overlay
-                const removeOverlay = () => { try { const el = header.querySelector('.iframe-loading'); if (el) el.remove(); } catch(e){} };
-                iframe.addEventListener('load', removeOverlay, { once: true });
-                iframe.addEventListener('error', removeOverlay, { once: true });
+                const removeOverlay=() => {try {const el=header.querySelector('.iframe-loading'); if(el) el.remove();} catch(e) {} };
+                iframe.addEventListener('load',removeOverlay,{once: true});
+                iframe.addEventListener('error',removeOverlay,{once: true});
               }
-              const src = iframe.getAttribute('data-src');
-              if (src) iframe.setAttribute('src', src);
+              const src=iframe.getAttribute('data-src');
+              if(src) iframe.setAttribute('src',src);
             }
           } else {
             tabbedCardOuter.classList.remove('wide-tab');
             // unload iframe to stop background requests when leaving the tab
-            if (iframe && iframe.getAttribute('src')) {
+            if(iframe&&iframe.getAttribute('src')) {
               iframe.removeAttribute('src');
             }
             // ensure any overlay is removed when leaving
-            const header = document.getElementById('dataportal-tab');
-            if (header) {
-              const existing = header.querySelector('.iframe-loading');
-              if (existing) existing.remove();
+            const header=document.getElementById('dataportal-tab');
+            if(header) {
+              const existing=header.querySelector('.iframe-loading');
+              if(existing) existing.remove();
             }
           }
         }
       }
 
       function getTabFromQuery() {
-        const params = new URLSearchParams(window.location.search);
-        return params.get('tab') || '';
+        const params=new URLSearchParams(window.location.search);
+        return params.get('tab')||'';
       }
 
       function setTabInQuery(tabId) {
-        const params = new URLSearchParams(window.location.search);
-        params.set('tab', tabId);
-        const newUrl = window.location.pathname + '?' + params.toString();
-        if (history.replaceState) {
-          history.replaceState(null, '', newUrl);
+        const params=new URLSearchParams(window.location.search);
+        params.set('tab',tabId);
+        const newUrl=window.location.pathname+'?'+params.toString();
+        if(history.replaceState) {
+          history.replaceState(null,'',newUrl);
         } else {
-          window.location.search = params.toString();
+          window.location.search=params.toString();
         }
       }
 
       tabBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-          const tabId = btn.getAttribute('data-tab');
-          if (!tabId || !validTabIds.has(tabId)) return;
+        btn.addEventListener('click',function() {
+          const tabId=btn.getAttribute('data-tab');
+          if(!tabId||!validTabIds.has(tabId)) return;
           activateTab(tabId);
           setTabInQuery(tabId);
         });
       });
 
       // Initialize from current URL
-      activateTab(getTabFromQuery() || defaultTabId);
+      activateTab(getTabFromQuery()||defaultTabId);
 
       // Handle browser back/forward navigation
-      window.addEventListener('popstate', function() {
-        activateTab(getTabFromQuery() || defaultTabId);
+      window.addEventListener('popstate',function() {
+        activateTab(getTabFromQuery()||defaultTabId);
       });
     });
   </script>
 </body>
+
 </html>
