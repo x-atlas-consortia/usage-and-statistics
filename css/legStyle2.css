@@ -1,0 +1,78 @@
+/* Extracted from styles.css — retro DOS theme (moved) */
+
+body.dos {
+  background: #000 !important;
+  color: #33ff33 !important;
+  font-family: 'Courier New', Courier, monospace !important
+}
+
+body.dos .sidebar {
+  background: #050505 !important
+}
+
+body.dos .sidebar .lastTouch {
+  font-size: 0.3em;
+  color: #6eff57 !important
+}
+
+body.dos .sidebar .brand #hubmapLogo {
+  filter: brightness(70%) sepia(1) hue-rotate(422deg)
+}
+
+body.dos .data-table,
+body.dos .tabbed-card {
+  background: #000 !important;
+  border: 2px solid #33ff33 !important;
+  color: #33ff33 !important;
+  box-shadow: none !important
+}
+
+body.dos .tab-panel {
+  border: none
+}
+
+body.dos .tab-btn,
+body.dos .tab-bar .tab-btn {
+  background: #000 !important;
+  color: #33ff33 !important;
+  border: 2px solid #33ff33 !important
+}
+
+body.dos .data-table th,
+body.dos .data-table td {
+  border-color: #33ff33 !important;
+  background: transparent !important;
+  color: #33ff33 !important
+}
+
+body.dos .tab-content {
+  background: #050505 !important
+}
+
+body.dos .data-table {
+  background: transparent !important;
+  border-color: #222 !important
+}
+
+body.dos .data-table tbody tr:nth-child(odd) {
+  background-color: #000 !important
+}
+
+body.dos .data-table tbody tr:nth-child(even) {
+  background-color: #0b0b0b !important
+}
+
+body.dos .data-table tbody tr:hover {
+  background-color: #111 !important
+}
+
+body.dos #downloadedDataTable {
+  border-color: #33ff33 !important
+}
+body.dos #downloadedDataTable.data-table th {
+  background-color: #111 !important
+}
+
+body.dos #downloadedDataTable tbody tr:first-child {
+  background-color: #333 !important
+}

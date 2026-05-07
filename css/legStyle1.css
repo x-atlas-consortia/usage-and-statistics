@@ -1,0 +1,79 @@
+/* Extracted from styles.css — retro Windows 3.1 theme (moved) */
+
+body.win31 {
+  background: #008080 !important;
+  color: #000 !important;
+  font-family: 'MS Sans Serif', Tahoma, Arial, sans-serif !important
+}
+
+body.win31 h1 {
+  color: #fff
+}
+
+body.win31 .sidebar {
+  background: #14a9a9
+}
+
+body.win31 .card,
+body.win31 .data-table,
+body.win31 .tabbed-card,
+body.win31 .tab-content {
+  background: #c0c0c0 !important;
+  border: 2px solid #fff !important;
+  box-shadow: none !important
+}
+
+body.win31 .tab-panel,
+body.win31 .card .tab-content {
+  border: none !important
+}
+
+body.win31 .tab-bar .tab-btn,
+body.win31 .tab-btn {
+  background: linear-gradient(#fff, #c0c0c0) !important;
+  color: #000 !important;
+  border: 2px outset #fff !important;
+  box-shadow: none !important
+}
+
+body.win31 .tab-btn.active {
+  background: linear-gradient(#c0c0c0, #a0a0a0) !important;
+  border: 2px inset #fff !important
+}
+
+body.win31 .data-table th,
+body.win31 .data-table td {
+  border-color: #808080 !important;
+  background: transparent !important;
+  color: #000 !important
+}
+
+body.win31 .btn {
+  background: linear-gradient(#fff, #c0c0c0) !important;
+  border: 2px outset #fff !important;
+  color: #000 !important;
+  box-shadow: none !important
+}
+
+body.win31 .downloaded-header {
+  text-align: right !important
+}
+
+body.win31 #downloadedDataTable {
+  border-color: #6d6d6d !important
+}
+
+body.win31 #downloadedDataTable.data-table th {
+  background-color: #dcdcdc !important
+}
+
+body.win31 #downloadedDataTable tbody tr:nth-child(even) {
+  background-color: #eee !important
+}
+body.win31 #downloadedDataTable tbody tr:nth-child(odd) {
+  background-color: #ddd !important
+}
+
+body.win31 #downloadedDataTable tbody tr:first-child {
+  background-color: #8c8c8c !important
+}

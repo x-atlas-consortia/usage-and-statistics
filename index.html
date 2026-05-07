@@ -8,13 +8,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:slnt,wght@-10..0,100..900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/legStyle1.css" />
+  <link rel="stylesheet" href="css/legStyle2.css" />
 </head>
 <body>
 
   <aside class="sidebar">
     <div class="brand">
-      <img src="hubmap-type-white250.png" alt="HuBMAP Logo">
+      <img id="hubmapLogo" src="hubmap-type-white250.png" alt="HuBMAP Logo">
     </div>
     <div class="lastTouch">
       <span class="touchLabel">Last Generated: </span><span id="lastTouchDate"></span>
@@ -56,7 +58,7 @@
               <thead>
                 <tr>
                   <th>Month</th>
-                  <th class="downloaded-header">Data Downloaded (TB)</th>
+                  <th class="downloaded-header">Data Downloaded (TiB)</th>
                 </tr>
               </thead>
               <tbody>
@@ -111,6 +113,7 @@
   </div> 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/filesize@8.0.3/lib/filesize.min.js"></script>
+  <script src="envs.js"></script>
   <script src="app.js"></script>
   <script>
     // Enable click-and-drag resizing with the handle
@@ -179,6 +182,22 @@
             tabbedCardOuter.classList.add('wide-tab');
             // attach iframe src only when tab is activated to avoid background network activity
             if (iframe && !iframe.getAttribute('src')) {
+              // create and show an inline spinner overlay while the iframe loads
+              const header = document.getElementById('dataportal-tab');
+              if (header) {
+                // remove any existing overlay first
+                const existing = header.querySelector('.iframe-loading');
+                if (existing) existing.remove();
+                const overlay = document.createElement('div');
+                overlay.className = 'iframe-loading';
+                overlay.innerHTML = '<div class="spinner-wrap"><div class="spinner" aria-hidden="true"></div><div class="loading-text">Loading Data Portal…</div></div>';
+                header.appendChild(overlay);
+
+                // attach load/error handlers to the iframe to remove overlay
+                const removeOverlay = () => { try { const el = header.querySelector('.iframe-loading'); if (el) el.remove(); } catch(e){} };
+                iframe.addEventListener('load', removeOverlay, { once: true });
+                iframe.addEventListener('error', removeOverlay, { once: true });
+              }
               const src = iframe.getAttribute('data-src');
               if (src) iframe.setAttribute('src', src);
             }
@@ -187,6 +206,12 @@
             // unload iframe to stop background requests when leaving the tab
             if (iframe && iframe.getAttribute('src')) {
               iframe.removeAttribute('src');
+            }
+            // ensure any overlay is removed when leaving
+            const header = document.getElementById('dataportal-tab');
+            if (header) {
+              const existing = header.querySelector('.iframe-loading');
+              if (existing) existing.remove();
             }
           }
         }

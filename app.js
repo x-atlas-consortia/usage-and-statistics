@@ -1,135 +1,4 @@
-// --- Navigation, iframe, and layout logic from index.html ---
-window.addEventListener('DOMContentLoaded', function(){
-  const links = document.querySelectorAll('.nav-link');
-  const frame = document.getElementById('mainFrame');
-  // remember per-src layout state ("side" or "stack")
-  const layouts = {};
-
-  function buildSrcUrl(src, layoutOverride) {
-    const url = new URL(src, window.location.href);
-    // forward any parent query params (e.g. ?v=...) to the iframe unless already present
-    const parentParams = new URLSearchParams(window.location.search || '');
-    parentParams.forEach((val, key) => {
-      if (!url.searchParams.has(key)) url.searchParams.set(key, val);
-    });
-    // apply layout override if provided, otherwise use stored layout for this src
-    const layoutToApply = layoutOverride || layouts[src];
-    if (layoutToApply) url.searchParams.set('layout', layoutToApply === 'stack' ? 'stack' : 'side');
-    return url.toString();
-  }
-
-  // regular tab navigation (no Ctrl/Cmd toggling here)
-  function activateTab(src, options={push:true, layoutOverride:null}){
-    const match = Array.from(links).find(x => x.getAttribute('data-src') === src);
-    if (match) {
-      links.forEach(x => x.classList.remove('active'));
-      match.classList.add('active');
-    }
-    // load iframe with forwarded params + optional layout override
-    frame.src = buildSrcUrl(src, options.layoutOverride);
-    // update parent URL so active tab is reflected; preserve other params
-    try {
-      const params = new URLSearchParams(window.location.search || '');
-      params.set('src', src);
-      const newUrl = window.location.pathname + (params.toString() ? ('?' + params.toString()) : '');
-      if (options.push) history.pushState({ src }, '', newUrl);
-      else history.replaceState({ src }, '', newUrl);
-    } catch (err) {
-      // ignore history errors
-    }
-  }
-  links.forEach(l => l.addEventListener('click', e => {
-    e.preventDefault();
-    const src = l.getAttribute('data-src');
-    activateTab(src, { push: true });
-  }));
-
-  // Ctrl/Cmd + click on the brand toggles layout for the currently active tab
-  const brand = document.querySelector('.brand');
-  if (brand) {
-    brand.addEventListener('click', e => {
-      if (!(e.ctrlKey || e.metaKey)) return;
-      // find the active tab (fallback to first link)
-      const active = document.querySelector('.nav-link.active') || links[0];
-      if (!active) return;
-      const src = active.getAttribute('data-src');
-      const current = layouts[src] || 'side';
-      const next = current === 'side' ? 'stack' : 'side';
-      layouts[src] = next;
-      // If the iframe is currently showing that src, send a postMessage to ask the child to reapply layout
-      try {
-        const iframeWindow = frame && frame.contentWindow;
-        const frameUrl = frame && frame.src ? String(frame.src) : '';
-        const isSame = frameUrl && frameUrl.indexOf(src) !== -1;
-        if (iframeWindow && isSame) {
-          iframeWindow.postMessage({ type: 'set-layout', layout: next === 'stack' ? 'stack' : 'side' }, '*');
-        } else {
-          // fallback: navigate the iframe to the src with layout param
-          frame.src = buildSrcUrl(src, next === 'stack' ? 'stack' : 'side');
-        }
-      } catch (err) {
-        // fallback to reloading if messaging fails
-        frame.src = buildSrcUrl(src, next === 'stack' ? 'stack' : 'side');
-      }
-      // ensure active styling
-      links.forEach(x => x.classList.remove('active'));
-      active.classList.add('active');
-    });
-  }
-  // if the page was opened with a top-level ?src=... param, auto-open that link
-  try {
-    const qs = new URLSearchParams(window.location.search || '');
-    const requested = qs.get('src');
-    if (requested) {
-      // use activateTab but don't push another history entry
-      activateTab(requested, { push: false });
-    }
-    else {
-      // otherwise ensure the initially-active tab is loaded with forwarded parent params
-      const active = document.querySelector('.nav-link.active') || links[0];
-      if (active) {
-        const src = active.getAttribute('data-src');
-        activateTab(src, { push: false });
-      }
-    }
-  } catch (e) {
-    // ignore
-  }
-
-  // respond to back/forward navigation — restore the src param as the active tab
-  window.addEventListener('popstate', function(ev){
-    try {
-      const qs = new URLSearchParams(window.location.search || '');
-      const requested = qs.get('src');
-      if (requested) activateTab(requested, { push: false });
-    } catch (err) {
-      // ignore
-    }
-  });
-
-  // accept layout change notifications from child frames so parent remembers user's choice
-  window.addEventListener('message', function(e){
-    try {
-      const msg = (typeof e.data === 'string') ? JSON.parse(e.data) : e.data;
-      if (!msg || msg.type !== 'layout-changed') return;
-      const rawSrc = msg.src || '';
-      // try to match a configured data-src by basename
-      const basename = rawSrc.split('/').pop();
-      let linkKey = null;
-      for (const l of links) {
-        const ds = l.getAttribute('data-src') || '';
-        if (ds === rawSrc || ds.indexOf(basename) !== -1) { linkKey = ds; break; }
-      }
-      if (!linkKey) {
-        const active = document.querySelector('.nav-link.active');
-        linkKey = active ? active.getAttribute('data-src') : null;
-      }
-      if (linkKey) layouts[linkKey] = (msg.layout === 'stack' ? 'stack' : 'side');
-    } catch (err) {
-      // ignore malformed messages
-    }
-  });
-});
+// Navigation/iframe logic removed — not used by this index.html variant
 
 function formatBytes(bytes) {
   // Prefer using the `filesize` library if available (browser global added via CDN).
@@ -182,8 +51,8 @@ function formatBytes(bytes) {
   // smart mode: prefer using global `filesize` if provided (added via CDN in index.html)
   try {
     if (typeof window !== 'undefined' && typeof window.filesize === 'function') {
-      // use decimal (SI) units for the smart mode so it matches user expectation for transfer totals
-      const formatted = window.filesize(n, { base: 10, round: 2, spacer: ' ' });
+      // use binary (IEC) units so smart mode prefers TiB for large transfer totals
+      const formatted = window.filesize(n, { base: 2, round: 2, spacer: ' ' });
       // filesize may use non-breaking spaces; normalize and split into value + unit
       const out = String(formatted).replace(/\u00A0/g, ' ').trim();
       const parts = out.split(/\s+/);
@@ -198,33 +67,6 @@ function formatBytes(bytes) {
 
   // Fallback to human-readable formatter
   return formatWithUnit(n, false);
-}
-
-function generatePalette(n) {
-  // Generate a gradient palette between two hex colors (default: #cfd3e2 -> #444a65)
-  const startHex = '#cfd3e2';
-  const endHex = '#444a65';
-  function hexToRgb(hex) {
-    const h = hex.replace('#','');
-    const bigint = parseInt(h.length===3 ? h.split('').map(c=>c+c).join('') : h, 16);
-    return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
-  }
-  function rgbToHex(r,g,b){
-    return '#' + [r,g,b].map(v=> Math.round(v).toString(16).padStart(2,'0')).join('');
-  }
-  const a = hexToRgb(startHex);
-  const b = hexToRgb(endHex);
-  if (!n || n <= 0) return [];
-  if (n === 1) return [rgbToHex((a[0]+b[0])/2, (a[1]+b[1])/2, (a[2]+b[2])/2)];
-  const out = [];
-  for (let i = 0; i < n; i++) {
-    const t = i / (n - 1);
-    const r = a[0] + (b[0] - a[0]) * t;
-    const g = a[1] + (b[1] - a[1]) * t;
-    const bl = a[2] + (b[2] - a[2]) * t;
-    out.push(rgbToHex(r,g,bl));
-  }
-  return out;
 }
 
 // Loading overlay helpers
@@ -260,13 +102,26 @@ function hideLoadingOverlay() {
   document.body.classList.remove('dimmed');
 }
 
+const DEFAULT_API_URL = 'http://10.4.119.74:8484/publication-and-usage-stats';
+
+function getConfiguredApiUrl() {
+  // (provided by envs.js)
+  try {
+    if (typeof window !== 'undefined' && window.__APP_CONFIG__ && typeof window.__APP_CONFIG__.API_URL === 'string' && window.__APP_CONFIG__.API_URL.trim()) {
+      return window.__APP_CONFIG__.API_URL.trim();
+    }
+  } catch (e) {
+    // ignore
+  }
+  return DEFAULT_API_URL;
+}
+
 async function init(){
-  // ...existing code...
   // Remove any existing overlays from previous attempts
   const existing = document.getElementById('error-overlay');
   if (existing) existing.remove();
 
-  const API_URL = 'http://10.4.119.74:8484/publication-and-usage-stats';
+  const API_URL = getConfiguredApiUrl();
   function fetchWithTimeout(url, ms) {
     const controller = new AbortController();
     const signal = controller.signal;
@@ -278,18 +133,6 @@ async function init(){
   showLoadingOverlay('Loading usage data…');
 
   try{
-    // apply layout param (allow parent to toggle between side-by-side and stacked)
-    try {
-      const params = new URLSearchParams(window.location.search || '');
-      const layout = params.get('layout');
-      const grid = document.querySelector('.grid');
-      if (grid) {
-        if (layout === 'stack' || layout === 'single' || layout === 'single-column') grid.classList.add('single-column');
-        else grid.classList.remove('single-column');
-      }
-    } catch (e) {
-      // ignore URL parsing errors
-    }
     // Ensure the resizable tab area starts at up to 1200px (or viewport width minus container margins)
     try {
       const resizable = document.querySelector('.resizable-tab-content');
@@ -317,8 +160,6 @@ async function init(){
         try {
           data = JSON.parse(text);
         } catch (parseErr) {
-          // If the sample file contains multiple JSON objects concatenated together,
-          // try to coerce into a JSON array and take the first object as a best-effort fallback.
           try {
             const coerced = '[' + text.replace(/}\s*\{/g, '},{') + ']';
             const arr = JSON.parse(coerced);
@@ -398,33 +239,79 @@ async function init(){
     if (downloadedDataTable && downloadedDataTable.querySelector) {
       const tbody = downloadedDataTable.querySelector('tbody');
       if (tbody) {
+        // Compute TiB once and store processed downloaded entries in app state
+        function computeTiBNumber(numBytes) {
+          const v = Number(numBytes) || 0;
+          try {
+            if (typeof window !== 'undefined' && typeof window.filesize === 'function') {
+              // force exponent 4 (TiB) and binary base; parse numeric portion
+              const out = String(window.filesize(v, { base: 2, round: 2, spacer: ' ', exponent: 4 })).replace(/\u00A0/g, ' ').trim();
+              const parts = out.split(/\s+/);
+              const n = parts[0] ? Number(parts[0]) : 0;
+              return Number.isFinite(n) ? Number(n.toFixed(2)) : 0;
+            }
+          } catch (e) {
+            // fall through to fallback
+          }
+          const TiB = Math.pow(1024, 4);
+          return Number(((v / TiB) || 0).toFixed(2));
+        }
+
+        // Build array of processed downloaded rows with bytes + TiB numeric value
+        const processedDownloaded = monthly.map(m => ({
+          month: m.month,
+          bytes: Number(m.bytes_downloaded) || 0,
+          TiB: computeTiBNumber(m.bytes_downloaded)
+        }));
+        const accumulatedTotalTiB = computeTiBNumber(totalBytes || 0);
+
+        // expose processed data for other parts of the app to refer to
+        try {
+          window.__USAGE_APP_STATE__ = window.__USAGE_APP_STATE__ || {};
+          window.__USAGE_APP_STATE__.rawData = data;
+          window.__USAGE_APP_STATE__.downloaded = processedDownloaded;
+          window.__USAGE_APP_STATE__.totalBytes = totalBytes;
+          window.__USAGE_APP_STATE__.totalTiB = accumulatedTotalTiB;
+        } catch (e) {
+          // ignore if global assign fails in some constrained environments
+        }
+
+        // Render rows using precomputed TiB (store original bytes for tooltips)
         let downloadedRows = [];
-        function tbValue(n) { const v = Number(n) || 0; return (v / 1e12).toFixed(2); }
-        downloadedRows.push(`<tr><td style="font-weight:600;">ACCUMULATED TOTAL</td><td class="accumulatedTotal numFormat" data-bytes="${totalBytes}">${tbValue(totalBytes)}</td></tr>`);
-        downloadedRows = downloadedRows.concat(monthly.map(m => {
-          const d = new Date(m.month);
+        downloadedRows.push(`<tr><td style="font-weight:600;">ACCUMULATED TOTAL</td><td class="accumulatedTotal numFormat" data-bytes="${totalBytes}" data-tib="${accumulatedTotalTiB}">${accumulatedTotalTiB.toFixed(2)}</td></tr>`);
+        downloadedRows = downloadedRows.concat(processedDownloaded.map(d => {
+          const dDate = new Date(d.month);
           let label;
-          if (!isNaN(d)) {
-            const month = d.toLocaleDateString(undefined, { month: 'short' });
-            const year = d.getFullYear();
+          if (!isNaN(dDate)) {
+            const month = dDate.toLocaleDateString(undefined, { month: 'short' });
+            const year = dDate.getFullYear();
             label = `<span class=\"month-bold\">${month}</span> <span class=\"year-muted\">${year}</span>`;
           } else {
-            label = String(m.month);
+            label = String(d.month);
           }
-          return `<tr><td>${label}</td><td class="numFormat" data-bytes="${m.bytes_downloaded}">${tbValue(m.bytes_downloaded)}</td></tr>`;
+          return `<tr><td>${label}</td><td class="numFormat" data-bytes="${d.bytes}" data-tib="${d.TiB}">${d.TiB.toFixed(2)}</td></tr>`;
         }));
         tbody.innerHTML = downloadedRows.join('');
-        // helper to (re)render cells from their raw `data-bytes` attribute
+
+        // helper to (re)render cells from their attributes without recomputing TiB
         function renderDownloadedCells() {
           tbody.querySelectorAll('td[data-bytes]').forEach(td => {
             const raw = td.getAttribute('data-bytes');
-            // Always display as TB with 2 decimal places and no unit label
-            const tb = ((Number(raw) || 0) / 1e12).toFixed(2);
+            const tibAttr = td.getAttribute('data-tib');
+            let tb = '0.00';
+            try {
+              if (tibAttr !== null) {
+                tb = (Number(tibAttr) || 0).toFixed(2);
+              } else {
+                tb = computeTiBNumber(raw).toFixed(2);
+              }
+            } catch (e) {
+              tb = computeTiBNumber(raw).toFixed(2);
+            }
             td.innerHTML = `<span class="downloaded-bold">${tb}</span>`;
             // expose the raw numeric bytes value on hover (tooltip) for each cell and its row
-            const rawStr = (raw === null || raw === undefined) ? '' : String(raw);
+            const rawStr = String(raw ?? '');
             try {
-              // Ensure both the cell and its row show the same tooltip format
               const formatted = rawStr ? Intl.NumberFormat().format(Number(rawStr)) : '';
               const tooltip = formatted ? (`bytes: ${formatted}`) : '';
               td.setAttribute('title', tooltip);
@@ -435,62 +322,13 @@ async function init(){
             }
           });
         }
-        
-        // initial render (ensures formatting uses current mode)
         renderDownloadedCells();
-
       }
     }
 
-    // chart — ensure monthly data is sorted chronologically (oldest -> newest)
-    // reuse the already sorted 'monthly' variable above
-    const chartMonthly = monthly; // or just use 'monthly' directly below
-    const labels = chartMonthly.map(m => {
-      const d = new Date(m.month);
-      if (!isNaN(d)) return d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
-      return String(m.month);
-    });
-    const chartValues = chartMonthly.map(m=>m.bytes_downloaded);
-    // compute cumulative totals (running sum) so chart shows cumulative bytes over time
-    let running = 0;
-    const cumulativeValues = values.map(v => { running += (v||0); return running; });
-    // set startDate and endDate based on earliest/latest monthly entries with a value
-    const firstWithValue = monthly.find(m => m.bytes_downloaded && m.bytes_downloaded > 0) || null;
-    let lastWithValue = null;
-    for (let i = monthly.length - 1; i >= 0; i--) {
-      const m = monthly[i];
-      if (m && m.bytes_downloaded && m.bytes_downloaded > 0) { lastWithValue = m; break; }
-    }
-    function formatMonthLabel(s){ const d = new Date(s); if (!isNaN(d)) return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short' }); return String(s); }
-    const startLabel = firstWithValue ? formatMonthLabel(firstWithValue.month) : '—';
-    const endLabel = lastWithValue ? formatMonthLabel(lastWithValue.month) : '—';
-    // Date range for the Downloaded Data tab: use first and last available months in the dataset
-    const rangeStart = (monthly && monthly.length > 0) ? formatMonthLabel(monthly[0].month) : '—';
-    const rangeEnd = (monthly && monthly.length > 0) ? formatMonthLabel(monthly[monthly.length - 1].month) : '—';
-    const startEl = document.getElementById('startDate');
-    const endEl = document.getElementById('endDate');
-    if (startEl) startEl.textContent = startLabel;
-    if (endEl) endEl.textContent = endLabel;
-    // Populate the downloaded-data tab range label (e.g. "May 2020 - Jun 2026")
-    const downloadedRangeEl = document.getElementById('downloadedRange');
-    if (downloadedRangeEl) downloadedRangeEl.textContent = `${rangeStart} - ${rangeEnd}`;
-    // also populate any cap-specific date placeholders inside card caps
-    document.querySelectorAll('.cap-start').forEach(el => { el.textContent = startLabel });
-    document.querySelectorAll('.cap-end').forEach(el => { el.textContent = endLabel });
-    // append the date range to the total label for context
-    const totalLabelEl = document.getElementById('totalLabel');
-    if (totalLabelEl) {
-      totalLabelEl.innerHTML = `Total data consumed from the portal <small class="small">between ${startLabel} and ${endLabel}</small>`;
-    }
-    // Populate monthlyTable with month and bytes downloaded
-    // const monthlyTable = document.getElementById('monthlyTable').querySelector('tbody');
-    // monthlyTable.innerHTML = monthly.map(m => {
-    //   const d = new Date(m.month);
-    //   const label = !isNaN(d) ? d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' }) : String(m.month);
-    //   return `<tr><td>${label}</td><td>${formatBytes(m.bytes_downloaded)}</td></tr>`;
-    // }).join('');
 
-    // datasets table (placed above organs)
+
+    // datasets table
     // Aggregate datasets by `dataset_type` so primary + component are combined
     const rawDatasets = (data.datasets || []);
     const agg = rawDatasets.reduce((m, d) => {
@@ -503,7 +341,6 @@ async function init(){
     const datasetsTable = document.getElementById('datasetsTable');
     datasetsTable.innerHTML = datasets.map(d => `<tr><td>${d.dataset_type}</td><td>${d.ds_count}</td></tr>`).join('');
     const totalDatasets = datasets.reduce((acc, d) => acc + d.ds_count, 0);
-    // document.getElementById('datasetsSummary').innerHTML = `<strong>${datasets.length}</strong> dataset types registered totaling <strong>${totalDatasets}</strong> datasets`;
 
     // organs table
     const organs = (data.organ_types||[]).slice().sort((a,b)=>b.organ_count - a.organ_count);
@@ -516,7 +353,6 @@ async function init(){
     }
     organsTable.innerHTML = organs.map(o => `<tr><td>${formatOrganName(o.name)}</td><td>${o.organ_count}</td></tr>`).join('');
     const totalOrgans = organs.reduce((acc,o)=>acc+o.organ_count,0);
-    // document.getElementById('organsSummary').innerHTML = `<strong>${organs.length}</strong> organ types have been registered across <strong>${totalOrgans}</strong> organs`;
 
   }catch(err){
     console.error('Failed to load usage data',err);
@@ -602,75 +438,34 @@ function showErrorOverlay(err) {
   const overlay = document.createElement('div');
   overlay.id = 'error-overlay';
   overlay.className = 'error-overlay';
-  overlay.style.position = 'fixed';
-  overlay.style.top = '0';
-  overlay.style.left = '0';
-  overlay.style.width = '100vw';
-  overlay.style.height = '100vh';
-  overlay.style.background = 'rgba(0,0,0,0.18)';
-  overlay.style.display = 'flex';
-  overlay.style.alignItems = 'center';
-  overlay.style.justifyContent = 'center';
-  overlay.style.zIndex = '9999';
 
 
   // Modal card wrapper (for stacking header above card)
   const modalWrapper = document.createElement('div');
-  modalWrapper.style.display = 'flex';
-  modalWrapper.style.flexDirection = 'column';
-  modalWrapper.style.alignItems = 'stretch';
-  modalWrapper.style.width = '100%';
-  modalWrapper.style.maxWidth = '420px';
+  modalWrapper.className = 'error-modal-wrapper';
 
   // Modal header/title bar (outside card)
   const modalHeader = document.createElement('div');
-  modalHeader.style.background = '#c1121f'; // solid red
-  modalHeader.style.color = '#fff';
-  modalHeader.style.fontWeight = '600';
-  modalHeader.style.fontSize = '1.08em';
-  modalHeader.style.padding = '10px 0 8px 20px';
-  modalHeader.style.borderTopLeftRadius = '10px';
-  modalHeader.style.borderTopRightRadius = '10px';
-  modalHeader.style.textAlign = 'left';
+  modalHeader.className = 'error-modal-header';
   modalHeader.textContent = 'Error';
 
   // Modal card (content)
   const card = document.createElement('div');
-  card.style.background = '#fff';
-  card.style.borderBottomLeftRadius = '10px';
-  card.style.borderBottomRightRadius = '10px';
-  card.style.boxShadow = '0 6px 32px rgba(44,44,80,0.18)';
-  card.style.padding = '28px 28px 18px 28px';
-  card.style.width = '100%';
-  card.style.position = 'relative';
-  card.style.fontFamily = 'Inter, system-ui, sans-serif';
-
-
-  // ...existing code...  
+  card.className = 'error-modal-card';
 
   // User-friendly message
   const msg = document.createElement('div');
-  msg.style.fontSize = '1.13em';
-  msg.style.fontWeight = '500';
-  msg.style.marginBottom = '0.7em';
-  msg.style.marginTop = '0.7em';
+  msg.className = 'error-msg';
   msg.textContent = 'Sorry, something went wrong loading usage data.';
 
   // Collapsible error details
   const details = document.createElement('details');
-  details.style.margin = '0.7em 0 0.5em 0';
+  details.className = 'error-details';
   const summary = document.createElement('summary');
   summary.textContent = 'Show error details';
-  summary.style.cursor = 'pointer';
-  summary.style.fontSize = '0.98em';
   details.appendChild(summary);
   const pre = document.createElement('pre');
-  pre.style.background = '#f6f8fa';
-  pre.style.padding = '12px';
-  pre.style.borderRadius = '6px';
-  pre.style.fontSize = '0.93em';
-  pre.style.marginTop = '8px';
-  pre.style.whiteSpace = 'pre-wrap';
+  pre.className = 'error-modal-pre';
   // Prefer error message, then stack, then stringified error
   if (err && err.message) {
     pre.textContent = err.message + (err.stack ? ('\n' + err.stack) : '');
@@ -685,10 +480,8 @@ function showErrorOverlay(err) {
   const closeBtn = document.createElement('button');
   closeBtn.textContent = 'Close';
   closeBtn.className = 'btn';
-  closeBtn.style.marginTop = '1.2em';
-  closeBtn.style.float = 'right';
+  closeBtn.classList.add('error-close');
   closeBtn.onclick = () => overlay.remove();
-
   card.appendChild(msg);
   card.appendChild(details);
   card.appendChild(closeBtn);
@@ -701,6 +494,66 @@ function showErrorOverlay(err) {
 
 
 window.addEventListener('DOMContentLoaded', init);
+// Special Classic Body Class Toggles
+(function setupLegacyStyles(){
+  const code = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a','Enter'];
+  let buffer = [];
+  window.addEventListener('keydown', function onKey(e){
+    try {
+      // ignore input elements so normal typing isn't disrupted
+      const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+      if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
+      buffer.push(e.key);
+      if (buffer.length > code.length) buffer.shift();
+      // debug: log the pressed key and current buffer
+      console.debug('[legacyStyle] key:', e.key, 'buffer:', buffer.join(','));
+      if (buffer.length === code.length && buffer.every((v,i)=> v === code[i])) {
+        try {
+          console.info('[legacyStyle] sequence matched — cycling retro themes');
+          const hasWin = document.body.classList.contains('win31');
+          const hasDos = document.body.classList.contains('dos');
+          let msg = '';
+          // cycle: none -> win31 -> dos -> none
+          if (!hasWin && !hasDos) {
+            // enable Win3.1-only theme (do NOT load monitor.css)
+            document.body.classList.add('win31');
+            msg = 'Windows 3.1 theme enabled';
+          } else if (hasWin && !hasDos) {
+            // swap Win3.1 -> DOS and load monitor.css for DOS visuals
+            document.body.classList.remove('win31');
+            document.body.classList.add('dos');
+            ensureMonitorCss();
+            msg = 'DOS theme enabled';
+          } else {
+            // was DOS (or both) -> clear retro themes and unload monitor.css
+            document.body.classList.remove('win31');
+            document.body.classList.remove('dos');
+            removeMonitorCss();
+            msg = 'Retro themes disabled';
+          }
+          // After a successful theme toggle, scroll to top so users see the updated theme immediately
+          try { window.scrollTo && window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { /* ignore */ }
+          // show a small toast that auto-removes
+          const id = 'win31-toast';
+          if (!document.getElementById(id)) {
+            const t = document.createElement('div');
+            t.id = id;
+            t.textContent = msg;
+            document.body.appendChild(t);
+            setTimeout(()=> { const el = document.getElementById(id); if (el) el.remove(); }, 2600);
+          }
+          // clear buffer to avoid repeated toggles
+          buffer = [];
+        } catch (err) {
+          console.error('[legacyStyle] theme cycle error', err);
+        }
+      }
+    } catch (err) {
+      console.error('[legacyStyle] handler error', err);
+    }
+  });
+})();
+/* === end easter-egg JS === */
 
 // Global error handler for uncaught errors
 window.addEventListener('error', function(event) {
