@@ -6,6 +6,10 @@ As well as LookerPortals for the Webportal and Dataportal
 
 ## Running
 
+Just access the index.html file through the file:// protocol in your chosen browser
+
+Alternitively, use serve:
+
 ```
 serve 
 ```
