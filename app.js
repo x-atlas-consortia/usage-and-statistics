@@ -324,6 +324,8 @@ async function init() {
           bytes: Number(m.bytes_downloaded) || 0,
           TiB: computeTiBNumber(m.bytes_downloaded),
         }));
+        // For the table display we prefer latest-month-first (reverse chronological)
+        const displayDownloaded = processedDownloaded.slice().reverse();
         const accumulatedTotalTiB = computeTiBNumber(totalBytes || 0);
 
         // expose processed data for other parts of the app to refer to
@@ -345,7 +347,7 @@ async function init() {
           )}</td></tr>`
         );
         downloadedRows = downloadedRows.concat(
-          processedDownloaded.map((d) => {
+          displayDownloaded.map((d) => {
             const dDate = new Date(d.month);
             let label;
             if (!isNaN(dDate)) {
