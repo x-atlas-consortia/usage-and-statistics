@@ -576,3 +576,14 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+
+.simulated-data-banner {
+  background: #fff7ed;
+  border: 1px solid #ffecd1;
+  padding: 10px 14px;
+  margin: 8px 12px;
+  border-radius: 6px;
+  color: #4a2e00;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 0.95rem;
+}
